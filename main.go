@@ -15,12 +15,6 @@ import (
 	"zephyr-desktop/config"
 )
 
-//import g "github.com/AllenDang/giu"
-//
-//func main() {
-//	window := g.NewMasterWindow("Zephyr", )
-//}
-
 func main() {
 	systray.Run(onReady, onExit)
 }
@@ -64,19 +58,41 @@ func promptSettingsList() {
 			config.FieldUserID,
 			config.FieldHost,
 		},
+		zenity.Title("Settings"),
 	)
 	if err != nil {
 		// Cancelled
 		return
 	}
 
-	value, err = zenity.Entry(
-		"Enter your "+field,
-		zenity.Title("Update "+field),
-	)
-	if err != nil {
-		// Cancelled
-		return
+	switch field {
+	case config.FieldHost:
+		var availableHosts []string
+		availableHosts, err = getAvailableHosts()
+		if err != nil {
+			// Unable to get list of available hosts
+			_ = zenity.Error(err.Error(), zenity.Title("Error"), zenity.Icon(zenity.ErrorIcon))
+			return
+		}
+		// Display selection
+		value, err = zenity.List(
+			"Select a host:",
+			availableHosts,
+			zenity.Title("Hosts"),
+		)
+		if err != nil {
+			// Cancelled
+			return
+		}
+	default:
+		value, err = zenity.Entry(
+			"Enter your "+field,
+			zenity.Title("Update "+field),
+		)
+		if err != nil {
+			// Cancelled
+			return
+		}
 	}
 
 	c := config.GetOrCreate()
@@ -86,8 +102,47 @@ func promptSettingsList() {
 	_ = zenity.Info(
 		fmt.Sprintf("Successfully updated %s!", field),
 		zenity.Title("Success"),
-		zenity.InfoIcon,
+		zenity.Icon(zenity.InfoIcon),
 	)
+}
+
+func getAvailableHosts() ([]string, error) {
+	c := config.GetOrCreate()
+	// Prepare the GET request
+	var requestBody bytes.Buffer
+
+	req, err := http.NewRequest("GET", "https://xericl.dev/api/hosts", &requestBody)
+	if err != nil {
+		log.Printf("Failed to create POST request: %v", err)
+		return nil, err
+	}
+	req.Header.Add("X-Upload-Token", c.Token)
+	req.Header.Add("X-Upload-User", c.UserID)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to send GET request: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get available hosts, status code: %d", resp.StatusCode)
+	}
+
+	var respBody []byte
+	respBody, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read available hosts response: %v", err)
+	}
+
+	var result []string
+	err = json.Unmarshal(respBody, &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal hosts response: %v", err)
+	}
+
+	return result, nil
 }
 
 func uploadClipboard() {
@@ -114,11 +169,9 @@ func uploadClipboard() {
 			return
 		}
 		clipboard.Write(clipboard.FmtText, []byte(resultURL))
-		return
 	}
+
 	// Clipboard read failed
-	log.Println("Failed to read clipboard.")
-	return
 }
 
 func uploadImage(data []byte) (string, error) {
@@ -148,10 +201,11 @@ func uploadImage(data []byte) (string, error) {
 		log.Printf("Failed to create POST request: %v", err)
 		return "", err
 	}
+	c := config.GetOrCreate()
 	req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
-	req.Header.Add("X-Upload-Token", "901ddde7-a3fa-4c17-8029-b35128f2bf5f")
-	req.Header.Add("X-Upload-User", "761dae8c-2d5b-40ea-b706-430d525d853e")
-	req.Header.Add("X-Upload-Host", "ejl.me")
+	req.Header.Add("X-Upload-Token", c.Token)
+	req.Header.Add("X-Upload-User", c.UserID)
+	req.Header.Add("X-Upload-Host", c.Host)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -164,7 +218,6 @@ func uploadImage(data []byte) (string, error) {
 		return "", fmt.Errorf("failed to upload image, status code: %d", resp.StatusCode)
 	}
 
-	log.Println("Image uploaded successfully.")
 	var u []byte
 	u, err = io.ReadAll(resp.Body)
 	if err != nil {

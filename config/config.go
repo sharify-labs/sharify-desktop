@@ -91,8 +91,6 @@ func (c *Config) save() {
 	if err != nil {
 		log.Fatalf("Unable to save config: %v", err)
 	}
-
-	log.Printf("Created file %s", file)
 }
 
 // getPath returns the absolute path of Zephyr's
