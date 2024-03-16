@@ -15,6 +15,11 @@ import (
 	"sharify-desktop/config"
 )
 
+const (
+	UploadSuccessMessage string = "Done! URL copied to clipboard."
+	ErrReadingMessage    string = "Failed to read clipboard. Please try again."
+)
+
 func main() {
 	systray.Run(onReady, nil)
 }
@@ -45,10 +50,6 @@ func onReady() {
 			}
 		}
 	}()
-	//mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
-
-	//Sets the icon of a menu item. Only available on Mac and Windows.
-	//mQuit.SetIcon(icon.Data)
 }
 
 func promptSettingsList() {
@@ -105,7 +106,7 @@ func promptSettingsList() {
 	c.SetField(field, value)
 
 	// Display success message
-	_ = zenity.Info(
+	_ = zenity.Notify(
 		fmt.Sprintf("Successfully updated %s!", field),
 		zenity.Title("Success"),
 		zenity.Icon(zenity.InfoIcon),
@@ -151,7 +152,13 @@ func getAvailableHosts() ([]string, error) {
 	return result, nil
 }
 
-//func display
+func displayNotification(message string) {
+	_ = zenity.Notify(
+		message,
+		zenity.Title("Sharify Desktop"),
+		zenity.Icon(zenity.InfoIcon),
+	)
+}
 
 func uploadClipboard() {
 	var data []byte
@@ -160,10 +167,11 @@ func uploadClipboard() {
 	if data = clipboard.Read(clipboard.FmtImage); data != nil {
 		resultURL, err := uploadImage(data)
 		if err != nil {
-			log.Printf("failed to upload image: %v", err)
+			displayNotification(fmt.Sprintf("failed to upload image: %v", err))
 			return
 		}
 		clipboard.Write(clipboard.FmtText, []byte(resultURL))
+		displayNotification(UploadSuccessMessage)
 		return
 	}
 
@@ -171,14 +179,16 @@ func uploadClipboard() {
 	if data = clipboard.Read(clipboard.FmtText); data != nil {
 		resultURL, err := uploadText(data)
 		if err != nil {
-			log.Printf("failed to upload text: %v", err)
+			displayNotification(fmt.Sprintf("failed to upload text: %v", err))
 			return
 		} else {
 			clipboard.Write(clipboard.FmtText, []byte(resultURL))
+			displayNotification(UploadSuccessMessage)
 		}
 	}
 
 	// Clipboard read failed
+	displayNotification(ErrReadingMessage)
 }
 
 func uploadImage(data []byte) (string, error) {
