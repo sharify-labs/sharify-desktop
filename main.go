@@ -201,6 +201,7 @@ func uploadClipboard() {
 		} else {
 			clipboard.Write(clipboard.FmtText, []byte(resultURL))
 			displayNotification(UploadSuccessMessage)
+			return
 		}
 	}
 
