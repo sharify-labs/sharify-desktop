@@ -16,22 +16,28 @@ import (
 )
 
 func main() {
-	systray.Run(onReady, onExit)
+	systray.Run(onReady, nil)
+}
+
+func exitApp() {
+	systray.Quit()
 }
 
 func onReady() {
 	systray.SetIcon(icon.Data)
 	systray.SetTitle("Sharify")
-	systray.AddMenuItem("Quit", "Quit the whole app")
 	err := clipboard.Init()
 	if err != nil {
 		panic(err)
 	}
+	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	mUpload := systray.AddMenuItem("Upload Clipboard", "Upload the image in your clipboard")
 	mSettings := systray.AddMenuItem("Settings", "Modify settings")
 	go func() {
 		for {
 			select {
+			case <-mQuit.ClickedCh:
+				exitApp()
 			case <-mUpload.ClickedCh:
 				uploadClipboard()
 			case <-mSettings.ClickedCh:
@@ -260,8 +266,4 @@ func uploadText(data []byte) (string, error) {
 	}
 	log.Println("Key: " + result.Key)
 	return PasteURL + "/" + result.Key, nil
-}
-
-func onExit() {
-	// clean up here
 }
