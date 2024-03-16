@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"fyne.io/systray"
@@ -9,15 +10,22 @@ import (
 	"github.com/ncruces/zenity"
 	"golang.design/x/clipboard"
 	"io"
+	"io/fs"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"sharify-desktop/config"
 )
 
+//go:embed assets/*
+var assets embed.FS
+
 const (
-	UploadSuccessMessage string = "Done! URL copied to clipboard."
-	ErrReadingMessage    string = "Failed to read clipboard. Please try again."
+	UploadSuccessMessage   string = "URL copied to clipboard."
+	ErrReadingMessage      string = "Failed to read clipboard. Please try again."
+	QuitTooltip            string = "Quit Sharify"
+	UploadClipboardTooltip string = "Upload your clipboard"
+	ChangeSettingsTooltip  string = "Change settings"
 )
 
 func main() {
@@ -28,16 +36,25 @@ func exitApp() {
 	systray.Quit()
 }
 
+func loadIcon() []byte {
+	iconBytes, err := fs.ReadFile(assets, "assets/sharify-desktop-icon.png")
+	if err != nil {
+		fmt.Printf("unable to load icon: %v", err)
+		return icon.Data
+	}
+	return iconBytes
+}
+
 func onReady() {
-	systray.SetIcon(icon.Data)
+	systray.SetIcon(loadIcon())
 	systray.SetTitle("Sharify")
 	err := clipboard.Init()
 	if err != nil {
 		panic(err)
 	}
-	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
-	mUpload := systray.AddMenuItem("Upload Clipboard", "Upload the image in your clipboard")
-	mSettings := systray.AddMenuItem("Settings", "Modify settings")
+	mQuit := systray.AddMenuItem("Quit", QuitTooltip)
+	mUpload := systray.AddMenuItem("Upload Clipboard", UploadClipboardTooltip)
+	mSettings := systray.AddMenuItem("Settings", ChangeSettingsTooltip)
 	go func() {
 		for {
 			select {
@@ -155,7 +172,7 @@ func getAvailableHosts() ([]string, error) {
 func displayNotification(message string) {
 	_ = zenity.Notify(
 		message,
-		zenity.Title("Sharify Desktop"),
+		zenity.Title("Sharify"),
 		zenity.Icon(zenity.InfoIcon),
 	)
 }
