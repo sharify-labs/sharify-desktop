@@ -93,12 +93,12 @@ func (c *Config) save() {
 	}
 }
 
-// getPath returns the absolute path of Zephyr's
+// getPath returns the absolute path of Sharify's
 // config directory based on the user's operating system.
 //
-// Windows - %AppData%\.zephyrdesktop
-// Mac - $HOME/Library/Application Support/zephyr-desktop
-// Linux - $XDG_CONFIG_HOME/zephyr-desktop or $HOME/.config/zephyr-desktop
+// Windows - %AppData%\.sharifydesktop
+// Mac - $HOME/Library/Application Support/sharify-desktop
+// Linux - $XDG_CONFIG_HOME/sharify-desktop or $HOME/.config/sharify-desktop
 func getPath() string {
 	parent, err := os.UserConfigDir()
 	if parent == "" {
@@ -108,9 +108,9 @@ func getPath() string {
 	var child string
 	switch runtime.GOOS {
 	case "windows":
-		child = ".zephyrdesktop"
+		child = ".sharifydesktop"
 	default:
-		child = "zephyr-desktop"
+		child = "sharify-desktop"
 	}
 
 	return filepath.Join(parent, child)

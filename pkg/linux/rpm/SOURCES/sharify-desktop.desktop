@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Sharify Desktop
+Exec=/usr/bin/sharify-desktop
+Icon=sharify-desktop-icon
+Terminal=false
+Categories=Game;
+Keywords=sharify;screenshot;pic;

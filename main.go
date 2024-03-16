@@ -12,7 +12,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"zephyr-desktop/config"
+	"sharify-desktop/config"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 
 func onReady() {
 	systray.SetIcon(icon.Data)
-	systray.SetTitle("Zephyr")
+	systray.SetTitle("Sharify")
 	systray.AddMenuItem("Quit", "Quit the whole app")
 	err := clipboard.Init()
 	if err != nil {
@@ -145,12 +145,13 @@ func getAvailableHosts() ([]string, error) {
 	return result, nil
 }
 
+//func display
+
 func uploadClipboard() {
 	var data []byte
 
 	// Attempt to read image
-	data = clipboard.Read(clipboard.FmtImage)
-	if data != nil {
+	if data = clipboard.Read(clipboard.FmtImage); data != nil {
 		resultURL, err := uploadImage(data)
 		if err != nil {
 			log.Printf("failed to upload image: %v", err)
@@ -161,14 +162,14 @@ func uploadClipboard() {
 	}
 
 	// Not image -> Attempt to read text
-	data = clipboard.Read(clipboard.FmtText)
-	if data != nil {
+	if data = clipboard.Read(clipboard.FmtText); data != nil {
 		resultURL, err := uploadText(data)
 		if err != nil {
 			log.Printf("failed to upload text: %v", err)
 			return
+		} else {
+			clipboard.Write(clipboard.FmtText, []byte(resultURL))
 		}
-		clipboard.Write(clipboard.FmtText, []byte(resultURL))
 	}
 
 	// Clipboard read failed

@@ -1,0 +1,232 @@
+name: Build and Package
+
+on:
+  push:
+    branches:
+      - 'master'
+#      - 'release'
+#      - 'test/**'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RELEASE: ${{ github.run_number }}
+
+jobs:
+  build_windows_linux:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 1
+      GO111MODULE: on
+      ZIG_VERSION: 0.11.0
+      ZIG_SHA256: 2d00e789fec4f71790a6e7bf83ff91d564943c5ee843c5fd966efc474b423047
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: >-
+          sudo apt-get update &&
+          sudo apt-get install -y
+          libgl-dev
+          libx11-dev
+          libxrandr-dev
+          libxxf86vm-dev
+          libxi-dev
+          libxcursor-dev
+          libxinerama-dev
+          libxkbcommon-dev
+
+      - name: Set up Go
+        uses: WillAbides/setup-go-faster@v1.14.0
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Read version
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Set up Zig
+        run: |
+          PATH=/usr/local/zig:${PATH}
+          echo "PATH=${PATH}" >> $GITHUB_ENV
+
+          set -eux
+          url="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+          sha256="${ZIG_SHA256}"
+
+          curl -sSL ${url} -o zig.tar.xz
+          echo ${sha256} zig.tar.xz | sha256sum -c -
+          sudo tar -C /usr/local -Jxvf zig.tar.xz
+          sudo mv /usr/local/zig-* /usr/local/zig
+          rm zig.tar.xz
+          zig version
+
+      - name: Build for Linux (amd64)
+        run: >-
+          env GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/linux/sharify-desktop-amd64 .
+
+      - name: Build for Windows (amd64)
+        run: >-
+          env
+          GOARCH=amd64
+          GOOS=windows
+          CC="zig cc -target x86_64-windows-gnu -Wl,--subsystem,windows -Wl,-s"
+          CXX="zig c++ -target x86_64-windows-gnu -Wl,--subsystem,windows -Wl,-s"
+          go build -trimpath
+          -ldflags="-H=windowsgui"
+          -o bin/windows/sharify-desktop-amd64.exe
+          .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-linux-binaries
+          path: bin
+          retention-days: 1
+
+  package_windows:
+    runs-on: windows-latest
+    needs: build_windows_linux
+    steps:
+      - name: Checkout .iss files
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pkg/windows
+            VERSION
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-linux-binaries
+          path: bin
+
+      - name: Read version
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Prepare for packaging
+        run: |
+          # Set variables for .iss file paths
+          AMD_ISS=pkg/windows/iss/SharifyDesktop-amd64.iss
+
+          # Edit versions in iss files
+          sed -i "s/#define MyAppVersion \"1.0.0\"/#define MyAppVersion \"${VERSION}\"/" "$AMD_ISS"
+
+          # Export env variables
+          echo "AMD_ISS=${AMD_ISS}" >> $GITHUB_ENV
+
+      - name: Package with Inno Setup
+        run: |
+          iscc.exe "$AMD_ISS"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: build/out
+          retention-days: 1
+
+  package_linux:
+    runs-on: [ ubuntu-latest ]
+    needs: build_windows_linux
+    steps:
+      - name: Checkout pkg files
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pkg/linux
+            VERSION
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-linux-binaries
+          path: bin
+
+      - name: Install dependencies
+        run: >-
+          sudo apt-get update &&
+          sudo apt-get install -y
+          rpm
+          debhelper
+          devscripts
+          dpkg-dev
+
+      - name: Read version
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Prepare for packaging
+        run: |
+          # Edit version in specs/control files
+          sed -i "s/^Version:.*/Version: ${VERSION}/" pkg/linux/rpm/SPECS/sharify.spec
+          sed -i "s/^Release:.*/Release: ${RELEASE}/" pkg/linux/rpm/SPECS/sharify.spec
+
+          # Set up rpmbuild/debbuild file tree
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+          # Copy resources
+          cp -r pkg/linux/rpm/* ~/rpmbuild/
+          # Copy binaries
+          cp bin/linux/sharify-desktop-amd64 ~/rpmbuild/SOURCES/
+          
+          # Make binaries executable
+          chmod +x ~/rpmbuild/SOURCES/sharify-desktop-amd64
+
+          # Create output folder
+          mkdir -p build/out
+
+      - name: Package .rpm (amd64)
+        run: >-
+          rpmbuild -bb
+          ~/rpmbuild/SPECS/sharify.spec
+          --define "_rpmdir build/out"
+          --target=x86_64
+
+      - name: Tidy artifact
+        run: |
+          cp -r build/out/x86_64/* build/out/
+          rm -rf build/out/x86_64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: build/out
+          retention-days: 1
+
+  merge_artifacts:
+    needs: [ package_windows, package_linux ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          path: all
+
+      - name: Reorganize
+        run: |
+          mkdir -p merged/{binaries,installers}
+
+          # Combine binaries
+          cp -r all/windows-linux-binaries/*/ merged/binaries/
+
+          # Combine installers
+          cp -r all/windows-installers/* merged/installers/
+          cp -r all/linux-installers/* merged/installers/
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-artifacts-${{ env.RELEASE }}
+          path: merged
+          compression-level: 9
+          retention-days: 90

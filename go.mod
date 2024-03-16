@@ -1,4 +1,4 @@
-module zephyr-desktop
+module sharify-desktop
 
 go 1.22
 
