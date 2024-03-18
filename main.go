@@ -25,7 +25,13 @@ const (
 	ErrReadingMessage      string = "Failed to read clipboard. Please try again."
 	QuitTooltip            string = "Quit Sharify"
 	UploadClipboardTooltip string = "Upload your clipboard"
+	ShortenURLTooltip      string = "Shorten a URL in your clipboard"
 	ChangeSettingsTooltip  string = "Change settings"
+)
+
+const (
+	PasteURL  string = "https://paste.crystaldev.co"
+	ZephyrURL string = "https://xericl.dev/api"
 )
 
 func main() {
@@ -54,6 +60,7 @@ func onReady() {
 	}
 	mQuit := systray.AddMenuItem("Quit", QuitTooltip)
 	mUpload := systray.AddMenuItem("Upload Clipboard", UploadClipboardTooltip)
+	mShorten := systray.AddMenuItem("Shorten URL", ShortenURLTooltip)
 	mSettings := systray.AddMenuItem("Settings", ChangeSettingsTooltip)
 	go func() {
 		for {
@@ -62,6 +69,8 @@ func onReady() {
 				exitApp()
 			case <-mUpload.ClickedCh:
 				uploadClipboard()
+			case <-mShorten.ClickedCh:
+				shortenURL()
 			case <-mSettings.ClickedCh:
 				promptSettingsList()
 			}
@@ -135,7 +144,7 @@ func getAvailableHosts() ([]string, error) {
 	// Prepare the GET request
 	var requestBody bytes.Buffer
 
-	req, err := http.NewRequest("GET", "https://xericl.dev/api/hosts", &requestBody)
+	req, err := http.NewRequest("GET", ZephyrURL+"/hosts", &requestBody)
 	if err != nil {
 		log.Printf("Failed to create POST request: %v", err)
 		return nil, err
@@ -209,6 +218,27 @@ func uploadClipboard() {
 	displayNotification(ErrReadingMessage)
 }
 
+func shortenURL() {
+	var data []byte
+
+	// Attempt to read url from clipboard
+	if data = clipboard.Read(clipboard.FmtText); data != nil {
+		resultURL, err := createRedirect(data)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("failed to shorten url: %v", err))
+			displayNotification(fmt.Sprintf("failed to shorten url: %v", err))
+			return
+		} else {
+			clipboard.Write(clipboard.FmtText, []byte(resultURL))
+			displayNotification(UploadSuccessMessage)
+			return
+		}
+	}
+
+	// Clipboard read failed
+	displayNotification(ErrReadingMessage)
+}
+
 func uploadImage(data []byte) (string, error) {
 	// Prepare the POST request
 	var requestBody bytes.Buffer
@@ -231,7 +261,7 @@ func uploadImage(data []byte) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", "https://xericl.dev/upload", &requestBody)
+	req, err := http.NewRequest("POST", ZephyrURL+"/upload", &requestBody)
 	if err != nil {
 		log.Printf("Failed to create POST request: %v", err)
 		return "", err
@@ -262,11 +292,62 @@ func uploadImage(data []byte) (string, error) {
 	return string(u), nil
 }
 
+func createRedirect(data []byte) (string, error) {
+	// Prepare the POST request
+	var requestBody bytes.Buffer
+	multipartWriter := multipart.NewWriter(&requestBody)
+
+	// Create a form file field 'file'
+	formField, err := multipartWriter.CreateFormField("long_url")
+	if err != nil {
+		log.Printf("Failed to create form file: %v", err)
+		return "", err
+	}
+	// Write the image data to the form file
+	if _, err = formField.Write(data); err != nil {
+		log.Printf("Failed to write url data to form file: %v", err)
+		return "", err
+	}
+	// Important to close the multipart writer to set the terminating boundary
+	if err = multipartWriter.Close(); err != nil {
+		log.Printf("Failed to close multipart writer: %v", err)
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", ZephyrURL+"/redirect", &requestBody)
+	if err != nil {
+		log.Printf("Failed to create POST request: %v", err)
+		return "", err
+	}
+	c := config.GetOrCreate()
+	req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
+	req.Header.Add("X-Upload-Token", c.Token)
+	req.Header.Add("X-Upload-User", c.UserID)
+	req.Header.Add("X-Upload-Host", c.Host)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to send POST request: %v", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to create redirect: %d", resp.StatusCode)
+	}
+
+	// Read response
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body, error: %d", err)
+	}
+
+	return string(respBody), nil
+}
+
 type PastebinResponse struct {
 	Key string `json:"key"`
 }
-
-const PasteURL string = "https://paste.crystaldev.co"
 
 func uploadText(data []byte) (string, error) {
 	// Prepare the POST request
