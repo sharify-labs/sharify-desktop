@@ -21,9 +21,9 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-OutputDir=D:\a\zephyr-desktop\zephyr-desktop\build\out
+OutputDir=D:\a\sharify-desktop\sharify-desktop\build\out
 OutputBaseFilename=SharifyDesktopSetup-{#MyAppVersion}-x86_64
-SetupIconFile=D:\a\zephyr-desktop\zephyr-desktop\pkg\windows\resources\sharify-desktop-icon.ico
+SetupIconFile=D:\a\sharify-desktop\sharify-desktop\pkg\windows\resources\sharify-desktop-icon.ico
 Compression=zip
 SolidCompression=no
 WizardStyle=modern
@@ -39,8 +39,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "D:\a\zephyr-desktop\zephyr-desktop\bin\windows\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\a\zephyr-desktop\zephyr-desktop\pkg\windows\resources\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\a\sharify-desktop\sharify-desktop\bin\windows\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\a\sharify-desktop\sharify-desktop\pkg\windows\resources\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
