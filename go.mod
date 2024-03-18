@@ -1,4 +1,4 @@
-module sharify-desktop
+module github.com/sharify-labs/sharify-desktop
 
 go 1.22
 

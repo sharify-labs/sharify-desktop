@@ -8,13 +8,13 @@ import (
 	"fyne.io/systray"
 	"fyne.io/systray/example/icon"
 	"github.com/ncruces/zenity"
+	"github.com/sharify-labs/sharify-desktop/config"
 	"golang.design/x/clipboard"
 	"io"
 	"io/fs"
 	"log"
 	"mime/multipart"
 	"net/http"
-	"sharify-desktop/config"
 )
 
 //go:embed assets/*
