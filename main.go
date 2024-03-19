@@ -261,7 +261,7 @@ func uploadImage(data []byte) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", ZephyrURL+"/upload", &requestBody)
+	req, err := http.NewRequest("POST", ZephyrURL+"/uploads?type=file", &requestBody)
 	if err != nil {
 		log.Printf("Failed to create POST request: %v", err)
 		return "", err
@@ -314,7 +314,7 @@ func createRedirect(data []byte) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", ZephyrURL+"/redirect", &requestBody)
+	req, err := http.NewRequest("POST", ZephyrURL+"/uploads?type=redirect&max_hours=-1", &requestBody)
 	if err != nil {
 		log.Printf("Failed to create POST request: %v", err)
 		return "", err
