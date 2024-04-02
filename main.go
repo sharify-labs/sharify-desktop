@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"fyne.io/systray"
 	"fyne.io/systray/example/icon"
@@ -11,10 +10,7 @@ import (
 	"github.com/sharify-labs/sharify-desktop/config"
 	"github.com/sharify-labs/sharify-go"
 	"golang.design/x/clipboard"
-	"io"
 	"io/fs"
-	"log"
-	"net/http"
 )
 
 //go:embed assets/*
@@ -209,34 +205,11 @@ func shortenURL() {
 	displayNotification(ErrReadingMessage)
 }
 
-type PastebinResponse struct {
-	Key string `json:"key"`
-}
-
 func uploadText(data []byte) (string, error) {
-	// Prepare the POST request
-	reqBody := bytes.NewBufferString(string(data))
-	resp, err := http.Post("https://paste.crystaldev.co/documents", "text/plain", reqBody)
+	api = sharify.New(sharify.AuthToken(config.GetOrCreate().Token), sharify.UserAgent("sharify-desktop/"+Version))
+	result, err := api.CreatePaste(string(data), sharify.SetDomain(config.GetOrCreate().Host))
 	if err != nil {
-		return "", fmt.Errorf("failed to make post request, error: %d", err)
+		return "", fmt.Errorf("failed to upload paste: %v", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to upload text, status code: %d", resp.StatusCode)
-	}
-
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body, error: %d", err)
-	}
-
-	var result PastebinResponse
-	err = json.Unmarshal(respBody, &result)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal response body, error: %d", err)
-	}
-	log.Println("Key: " + result.Key)
-	return "https://paste.crystaldev.co" + "/" + result.Key, nil
+	return result.URL, nil
 }
