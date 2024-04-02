@@ -10,15 +10,13 @@ import (
 )
 
 type Config struct {
-	Token  string `json:"token"`
-	UserID string `json:"user_id"`
-	Host   string `json:"host"`
+	Token string `json:"token"`
+	Host  string `json:"host"`
 }
 
 const (
-	FieldToken  string = "Token"
-	FieldUserID string = "UserID"
-	FieldHost   string = "Host"
+	FieldToken string = "Token"
+	FieldHost  string = "Host"
 )
 
 // GetOrCreate retrieves a *Config from reading or creating config on filesystem.

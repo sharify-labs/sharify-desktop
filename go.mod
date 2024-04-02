@@ -5,12 +5,14 @@ go 1.22
 require (
 	fyne.io/systray v1.10.0
 	github.com/ncruces/zenity v0.10.12
+	github.com/sharify-labs/sharify-go v0.0.0-20240401183851-1cd843afd46b
 	golang.design/x/clipboard v0.7.0
 )
 
 require (
 	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/dchest/jsmin v0.0.0-20220218165748-59f39799265f // indirect
+	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
