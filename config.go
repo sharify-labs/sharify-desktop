@@ -1,4 +1,4 @@
-package config
+package main
 
 import (
 	"encoding/json"
@@ -14,24 +14,13 @@ type Config struct {
 	Host  string `json:"host"`
 }
 
-const (
-	FieldToken string = "Token"
-	FieldHost  string = "Host"
-)
-
-// GetOrCreate retrieves a *Config from reading or creating config on filesystem.
-func GetOrCreate() *Config {
+func NewConfig() *Config {
 	var c Config
 
-	// Check if config file exists
 	path := getPath()
 	file := filepath.Join(path, "config.json")
-	_, err := os.Stat(file)
-	if err != nil {
-		// Missing file -> create folder
-		err = os.MkdirAll(path, os.ModePerm)
-		if err != nil {
-			// Failed to create config folder
+	if _, err := os.Stat(file); err != nil {
+		if err = os.MkdirAll(path, os.ModePerm); err != nil {
 			log.Fatalf("Unable to create config folder: %v", err)
 		}
 		c.save() // create config.json with empty values
@@ -39,34 +28,30 @@ func GetOrCreate() *Config {
 	}
 
 	// Config file exists -> read and unmarshal
-	var data []byte
-	data, err = os.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Unable to read existing config file: %v", err)
 	}
 
-	err = json.Unmarshal(data, &c)
-	if err != nil {
+	if err = json.Unmarshal(data, &c); err != nil {
 		log.Fatalf("Unable to unmarshal existing config file: %v", err)
 	}
-
 	return &c
 }
 
-func (c *Config) SetField(field string, value interface{}) {
-	s := reflect.ValueOf(c).Elem()
-	f := s.FieldByName(field)
+func (c *Config) SetField(name string, value interface{}) {
+	field := reflect.ValueOf(c).Elem().FieldByName(name)
 
-	if !f.IsValid() {
-		log.Fatalf("No such field: %s", field)
+	if !field.IsValid() {
+		log.Fatalf("No such field: %s", name)
 	}
 
-	if !f.CanSet() {
-		log.Fatalf("Cannot set %s field value", field)
+	if !field.CanSet() {
+		log.Fatalf("Cannot set %s field value", name)
 	}
 
 	v := reflect.ValueOf(value)
-	fieldType := f.Type()
+	fieldType := field.Type()
 	valueType := v.Type()
 
 	if fieldType != valueType {
@@ -74,7 +59,7 @@ func (c *Config) SetField(field string, value interface{}) {
 	}
 
 	// Set config and save to local file.
-	f.Set(v)
+	field.Set(v)
 	c.save()
 }
 
