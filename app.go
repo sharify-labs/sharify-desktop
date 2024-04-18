@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
+	"log"
+
 	"fyne.io/systray/example/icon"
 	"github.com/ncruces/zenity"
 	"github.com/sharify-labs/sharify-go"
 	"golang.design/x/clipboard"
-	"io/fs"
 )
 
 type App struct {
@@ -27,13 +29,13 @@ func NewApp() *App {
 func (a *App) Icon() []byte {
 	iconBytes, err := fs.ReadFile(assets, "assets/sharify-desktop-icon.png")
 	if err != nil {
-		fmt.Printf("unable to load icon: %v", err)
+		log.Printf("unable to load icon: %v", err)
 		return icon.Data
 	}
 	return iconBytes
 }
 
-func (_ *App) DisplayNotification(message string) {
+func (*App) DisplayNotification(message string) {
 	_ = zenity.Notify(
 		message,
 		zenity.Title("Sharify"),
@@ -110,14 +112,13 @@ func (a *App) ShortenLink() {
 			result, err = a.api.ShortenLink(string(data))
 		}
 		if err != nil {
-			fmt.Println(fmt.Sprintf("failed to shorten url: %v", err))
+			log.Printf("failed to shorten url: %v", err)
 			a.DisplayNotification(fmt.Sprintf("failed to shorten url: %v", err))
 			return
-		} else {
-			clipboard.Write(clipboard.FmtText, []byte(result.URL))
-			a.DisplayNotification(MessageUploadSuccess)
-			return
 		}
+		clipboard.Write(clipboard.FmtText, []byte(result.URL))
+		a.DisplayNotification(MessageUploadSuccess)
+		return
 	}
 
 	// Clipboard read failed

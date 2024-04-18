@@ -2,7 +2,8 @@ package main
 
 import (
 	"embed"
-	"fmt"
+	"log"
+
 	"fyne.io/systray"
 	"golang.design/x/clipboard"
 )
@@ -12,14 +13,14 @@ var assets embed.FS
 var Version string
 
 func main() {
-	fmt.Println("Initializing...")
+	log.Println("Initializing...")
 	systray.Run(func() {
-		fmt.Println("Checking clipboard compatibility...")
+		log.Println("Checking clipboard compatibility...")
 		err := clipboard.Init()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Starting App...")
+		log.Println("Starting App...")
 		app := NewApp()
 
 		systray.SetIcon(app.Icon())
@@ -43,6 +44,6 @@ func main() {
 				}
 			}
 		}()
-		fmt.Println("App is running.")
+		log.Println("App is running.")
 	}, nil)
 }

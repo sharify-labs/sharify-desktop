@@ -81,7 +81,7 @@ func (c *Config) save() {
 //
 // Windows - %AppData%\.sharifydesktop
 // Mac - $HOME/Library/Application Support/sharify-desktop
-// Linux - $XDG_CONFIG_HOME/sharify-desktop or $HOME/.config/sharify-desktop
+// Linux - $XDG_CONFIG_HOME/sharify-desktop or $HOME/.config/sharify-desktop.
 func getPath() string {
 	parent, err := os.UserConfigDir()
 	if parent == "" {
