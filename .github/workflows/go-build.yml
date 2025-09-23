@@ -19,8 +19,6 @@ jobs:
   build_windows_linux:
     runs-on: ubuntu-latest
     env:
-      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-      GOPRIVATE: "github.com/sharify-labs/sharify-go"
       CGO_ENABLED: 1
       GO111MODULE: on
       ZIG_VERSION: 0.11.0
@@ -64,9 +62,6 @@ jobs:
           rm zig.tar.xz
           zig version
 
-      - name: Configure Git
-        run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
-
       - name: Build for Linux (amd64)
         run: >-
           env GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/linux/sharify-desktop-amd64 .
@@ -93,8 +88,6 @@ jobs:
   build_macos:
     runs-on: macos-latest
     env:
-      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-      GOPRIVATE: "github.com/sharify-labs/sharify-go"
       CGO_ENABLED: 1
       GO111MODULE: on
 
@@ -106,9 +99,6 @@ jobs:
         uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version-file: 'go.mod'
-
-      - name: Configure Git
-        run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
 
       - name: Build for amd64
         run: >-
