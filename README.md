@@ -1,9 +1,6 @@
 # Sharify-Desktop
 Simple cross-platform desktop app for uploading content to Sharify.
 
-> [!WARNING]
-> Do not attempt to use this app. Sharify is not an active platform.
-
 Sharify-Desktop works alongside other Sharify components:
 - **[Canvas](https://github.com/sharify-labs/canvas)**: Serves uploaded content to end users
 - **[Spine](https://github.com/sharify-labs/spine)**: Web panel backend for user/content management
